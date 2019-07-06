@@ -11,7 +11,12 @@ def softmax(x):
 def mask_illegal(policy_vector, possible_moves):
     # returns new softmax
     valid_policy_vector = policy_vector * possible_moves
-    return valid_policy_vector
+
+    # if all legal positions are masked, return equal prob for all possible moves
+    if not valid_policy_vector.any():
+        return possible_moves/np.sum(possible_moves)
+
+    return softmax(np.log(valid_policy_vector+1e-10))
 
 
 def symmetry_board_moves(inputs):
@@ -20,9 +25,7 @@ def symmetry_board_moves(inputs):
     Each input has 8 symmetries including the given input i.e. rotation(0,90,180,270)+flip_horizontal(rotation(0,90,180,270))
     These 8 output for single input encapsulates all rotation and flip horizontally or vertically.
     '''
-    with open("data/action_space.pickle", 'rb') as f:
-        action_space = pickle.load(f)
-    reverse_action_space = {value: key for key, value in action_space.items()}
+    from lookup_table import action_space,reversed_action_space
     a = np.empty((5, 5), dtype="<U2")
     for x in range(1, 6):
         for y in range(1, 6):
@@ -33,7 +36,7 @@ def symmetry_board_moves(inputs):
         probs = move_probs[move_probs != 0]
         for c in range(217):
             if move_probs[c]:
-                moves.append(reverse_action_space[c])
+                moves.append(reversed_action_space[c])
         for i in range(4):
             moves_after = []
             tracker = np.rot90(a, i)

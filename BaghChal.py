@@ -10,20 +10,10 @@ PGN -> Portable Game Notation like in chess
         Example : 1.G33 B1122 2.G44
         [ Note: G<new_position> for unplaced piece ]
 '''
-import pickle
 import re
 from collections import Counter
 import numpy as np
-
-with open("data/points_link.pickle", 'rb') as f:
-    connected_points_dict = pickle.load(f)
-
-with open("data/bagh_moves.pickle", 'rb') as f:
-    bagh_moves_dict = pickle.load(f)
-
-with open("data/action_space.pickle", 'rb') as f:
-    action_space = pickle.load(f)
-
+from lookup_table import bagh_moves_dict,connected_points_dict,action_space
 
 class Board:
 
@@ -143,7 +133,7 @@ class Board:
             for move in self.possible_moves():
                 print(f" {move}", end="")
             print()
-
+            print()
         return wrapper
 
     @show_info
@@ -205,8 +195,14 @@ class Board:
         x1, y1, x2, y2 = int(move[1]), int(move[2]), int(move[3]), int(move[4])
         self.validate_points(move, x1, y1, x2, y2)
         self.validate_pp(move, x1, y1, move[0])
-        if not ((x2, y2) in self[x1, y1].valid_moves()):
-            raise Exception(
+
+        if move[0]=="G":
+            if not ((x2, y2) in self[x1, y1].valid_moves()):
+                raise Exception(
+                f"{(self.no_of_moves_made+2)//2}.{move} is not a valid move.")
+        elif move[0]=="B":
+            if not ((x2, y2) in self[x1, y1].valid_non_special_moves()):
+                raise Exception(
                 f"{(self.no_of_moves_made+2)//2}.{move} is not a valid move.")
         return True
 
@@ -295,14 +291,15 @@ class Board:
         if self.validate(move):
             self.safe_move(move)
 
-    def pure_move(move):
+    def pure_move(self,move):
         if len(move) == 2:
             self.move(f"G{move}")
-        x1, y1, x2, y2 = move
-        if abs(int(x1) - int(x2)) + abs(int(y1) - int(y2)) <= 2:
-            self.move(f"{self.next_turn}{move}")
         else:
-            self.move(f'{self.next_turn}x{move}')
+            x1, y1, x2, y2 = move
+            if (int(x1) - int(x2))**2 + (int(y1) - int(y2))**2 <= 2:
+                self.move(f"{self.next_turn}{move}")
+            else:
+                self.move(f'{self.next_turn}x{move}')
 
     def is_game_over(self):
         if self.goats_captured >= 5 or self.baghs_trapped == 4 or self.check_draw() or self.all_goats_trapped:

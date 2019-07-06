@@ -7,7 +7,7 @@ class Node:
     def __init__(self, parent, prior_prob):
         self.parent = parent
         self.children = {}  # { action -> child node }
-        self.n_visit = 0
+        self.n_visits = 0
         self.Q = 0
         self.U = 0
         self.P = prior_prob
@@ -15,7 +15,7 @@ class Node:
     def get_value(self, c_puct):
         """Calculate and return the value for this node.
         It is a combination of leaf evaluations Q, and this node's prior
-        adjusted for its visit count, u.
+        adjusted for its visit count, U.
         c_puct: a number in (0, inf) controlling the relative impact of
             value Q, and prior probability P, on this node's score.
         """
@@ -100,13 +100,13 @@ class MCTS:
             # pure_move() -> move on the basis of pure movement notation eg:1122
             board.pure_move(action)
 
-        # Evaluate the leaf using a network which outputs a list of
-        # (action, probability) tuples p and also a score v in [-1, 1]
-        # for the current player.
-        action_probs, leaf_value = self.policy(board.board_repr())
         # Check for end of game.
         end = board.is_game_over()
         if not end:
+            # Evaluate the leaf using a network which outputs a list of
+            # (action, probability) tuples p and also a score v in [-1, 1]
+            # for the current player.
+            action_probs, leaf_value = self.policy(board)
             node.expand(action_probs)
         else:
             # for end state，return the "true" leaf_value
@@ -115,7 +115,7 @@ class MCTS:
                 leaf_value = 0.0
             else:
                 leaf_value = (
-                    1.0 if winner == board.next_turn() else -1.0
+                    1.0 if winner == board.next_turn else -1.0
                 )
 
         # Update value and visit count of nodes in this traversal.
@@ -135,7 +135,7 @@ class MCTS:
         act_visits = [(act, node.n_visits)
                       for act, node in self.root.children.items()]
         acts, visits = zip(*act_visits)
-        act_probs = softmax(1.0 / temp * np.log(np.array(visits) + 1e-10))
+        act_probs = softmax(np.log(np.array(visits) + 1e-10)*(1/temp))
 
         return acts, act_probs
 

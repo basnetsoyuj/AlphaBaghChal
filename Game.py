@@ -1,5 +1,8 @@
+from BaghChal import Board
+import numpy as np
+from Player import HumanPlayer,MCTSPlayer
 class Game:
-    def __init__(self, board):
+    def __init__(self, board=Board()):
         self.board = board
 
     def start_play(self, GoatPlayer, BaghPlayer, show=True):
@@ -9,14 +12,17 @@ class Game:
         while True:
             player_to_move = GoatPlayer if self.board.next_turn == "G" else BaghPlayer
             move = player_to_move.get_action(self.board)
-            self.safe_move(move)
+            if player_to_move.__class__==HumanPlayer:
+                self.board.safe_move(move)
+            else:
+                self.board.pure_move(move)
             if show:
                 self.board.lightweight_show_board()
             end = self.board.is_game_over()
             if end:
                 return self.board.winner()
 
-    def start_self_play(self, player, show=0, temp=1e-3):
+    def start_self_play(self, player, show=1, temp=1e-3):
         """ start a self-play game using a MCTS player, reuse the search tree,
         and store the self-play data: (state, mcts_probs, z) for training
         """
@@ -41,6 +47,7 @@ class Game:
                 self.board.lightweight_show_board()
             end = self.board.is_game_over()
             if end:
+                value=np.array(value)
                 # winner from the perspective of the current player of each state
                 if self.board.winner() == "B":
                     value *= -1
@@ -48,4 +55,6 @@ class Game:
                     value *= 0
                 # reset MCTS root node
                 player.reset_player()
-                return self.board.winner(), zip(states, mcts_probs, value)
+                w=self.board.winner()
+                self.board=Board()
+                return w, zip(states, mcts_probs, value)

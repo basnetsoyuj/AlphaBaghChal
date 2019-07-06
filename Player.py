@@ -1,9 +1,6 @@
 from monte_carlo_tree_search import MCTS
-
-with open("data/action_space.pickle", 'rb') as f:
-    action_space = pickle.load(f)
-
-
+from lookup_table import action_space
+import numpy as np
 class MCTSPlayer:
     """AI player based on MCTS"""
 
@@ -21,7 +18,12 @@ class MCTSPlayer:
         move_probs = np.zeros(217)
         if sensible_moves:
             acts, probs = self.mcts.get_move_probs(board, temp)
-            move_probs[list(acts)] = probs
+            counter=0
+            for act in acts:
+                index=action_space[act]
+                move_probs[index]=probs[counter]
+                counter+=1
+
             if self.is_selfplay:
                 # add Dirichlet Noise for exploration (needed for
                 # self-play training)
@@ -38,8 +40,6 @@ class MCTSPlayer:
                 move = np.random.choice(acts, p=probs)
                 # reset the root node
                 self.mcts.update_with_move(-1)
-            #                location = board.move_to_location(move)
-            #                print("AI move: %d,%d\n" % (location[0], location[1]))
 
             if return_prob:
                 return move, move_probs
