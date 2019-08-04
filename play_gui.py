@@ -9,6 +9,8 @@ pygame.init()
 
 WHITE = (255, 255, 255)
 GRAY = (90, 90, 90)
+MAROON = (128, 0, 0)
+GREEN = (0, 77, 26)
 
 DISPLAY_WIDTH = 800
 DISPLAY_HEIGHT = 700
@@ -24,6 +26,8 @@ os.chdir(BASEDIR)
 board_img = pygame.image.load("images/board.png")
 bagh_img = pygame.image.load("images/bagh.png")
 goat_img = pygame.image.load("images/goat.png")
+dead_goat = pygame.image.load("images/dead_goat.png")
+trapped_bagh = pygame.image.load("images/trapped_bagh.png")
 
 CHOICE = [("Human Player", 0), ("AI player", 1)]
 
@@ -74,9 +78,25 @@ goat_player, bagh_player, pgn = app.return_input()
 
 board = Board(pgn)
 
+
+class Button:
+    def __init__(self, rect, command):
+        self.rect = pygame.Rect(rect)
+        self.image = pygame.Surface(self.rect.size).convert()
+        self.image.fill((48, 64, 66))
+        self.function = command
+
+    def on_click(self, event):
+        if self.rect.collidepoint(event.pos):
+            self.function()
+
+    def draw(self, surf):
+        surf.blit(self.image, self.rect)
+
+
 dragging = False
 game_exit = False
-
+real_dragging = False
 recent_pointer = (0, 0)
 
 func = lambda x, y: (round(x / 100) + 1, round(y / 100) + 1)
@@ -89,7 +109,9 @@ for x in range(1, 6):
         dict_center[(y, x)] = (boardX + 30 + i, boardY + 30 + j)
         j += 103
     i += 103
-dict_center[(-1, -1)] = goat_coordinate
+dict_center[1] = goat_coordinate
+
+convert = lambda x: "Bagh" if x == "B" else "Goat"
 
 
 def coordinate_pointing():
@@ -107,84 +129,121 @@ def coordinate_pointing():
         return 1
     else:
         return 0
-
+def undo():
+    try:
+        board.undo()
+    except:
+        pass
 
 screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 pygame.display.set_caption('Bagh Chal')
 clock = pygame.time.Clock()
+dragblit = 0
+font = pygame.font.Font('freesansbold.ttf', 25)
+font1 = pygame.font.Font('freesansbold.ttf', 20)
+undo_btn = Button(rect=(640, 225, 160, 45), command=undo)
+
+def render_text(font,text,color,bgcolor,x,y):
+    texts = font.render(text, True, color, bgcolor)
+    rect = texts.get_rect()
+    rect.center = (x,y)
+    screen.blit(texts,rect)
+def blit_piece(piece, position):
+    if piece == "B":
+        screen.blit(bagh_img, position)
+    else:
+        screen.blit(goat_img, position)
+
+
+def infoblit():
+    screen.blit(trapped_bagh, (15, 5))
+    render_text(font,f'Baghs Trapped: {board.baghs_trapped}',(17, 17, 17), WHITE,180, 30)
+    render_text(font,f'Goats Captured: {board.goats_captured}',(17, 17, 17), WHITE,505, 30)
+    render_text(font,f'{20-board.goats_placed}',(17, 17, 17), WHITE,705, 50)
+    screen.blit(dead_goat, (330, 8))
+    if board.is_game_over():
+        render_text(font, f" Game Over! ", WHITE, MAROON, 720, 175)
+        winner = convert(board.winner())
+        render_text(font1, f" Winner: {winner} ", GRAY, WHITE, 720, 200)
+    else:
+        render_text(font, f" {convert(board.next_turn)}'s Turn ", WHITE, GRAY, 720, 200)
+    if board.moves:
+        render_text(font1, board.pgn, (17,17,17),WHITE, 400, 620)
+    undo_btn.draw(screen)
+    render_text(font, "UNDO", WHITE, (48, 64, 66), 720, 250)
 
 
 def gameloop():
     for x in range(1, 6):
         for y in range(1, 6):
-            if (x, y) == recent_pointer and dragging:
-                pass
+            if (x, y) == recent_pointer and real_dragging:
+                continue
             piece = board[x, y]
             if piece:
                 if board[x, y].__str__() == "B":
                     screen.blit(bagh_img, (piece.x - 29, piece.y - 29))
                 else:
                     screen.blit(goat_img, (piece.x - 30, piece.y - 30))
+    if board.goats_placed < 20:
+        screen.blit(goat_img, (goat_coordinate[0] - 30, goat_coordinate[1] - 30))
+    if dragblit:
+        blit_piece(dragblit[0], dragblit[1])
 
 
 while not game_exit:
     clock.tick(60)
 
     screen.fill(WHITE)
-    pygame.draw.line(screen, GRAY, (boardX + BOARD_SIZE[0] + 10, 0), (boardX + BOARD_SIZE[0] + 10, DISPLAY_HEIGHT), 4)
+    pygame.draw.line(screen, GRAY, (boardX + BOARD_SIZE[0] + 35, 0), (boardX + BOARD_SIZE[0] + 35, 595), 4)
+    pygame.draw.line(screen, GRAY, (0, 595), (DISPLAY_WIDTH, 595), 4)
     screen.blit(board_img, (boardX, boardY))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             game_exit = True
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             recent_pointer = coordinate_pointing()
-            dragging = True
+            if recent_pointer:
+                dragging = True
+                x, y = dict_center[recent_pointer]
+                x, y = x - 29, y - 29
+                if recent_pointer == 1:
+                    blit_piece("G", (x, y))
+                else:
+                    piece = board[recent_pointer[0], recent_pointer[1]]
+                    if piece:
+                        blit_piece(piece.__str__(), (x, y))
         elif event.type == pygame.MOUSEBUTTONUP:
             dragging = False
+            real_dragging = False
+            dragblit = 0
             latest_pointer = coordinate_pointing()
-            if recent_pointer and latest_pointer:
-                if recent_pointer == 1 and latest_pointer:
-                    if latest_pointer != 1:
-                        try:
-                            board.move(f"G{latest_pointer[0]}{latest_pointer[1]}")
-                        except:
-                            pass
-                else:
-                    piece_ = board[recent_pointer[0], recent_pointer[1]]
-                    try:
-                        board.pure_move(f"{recent_pointer[0]}{recent_pointer[1]}{latest_pointer[0]}{latest_pointer[1]}")
-                    except:
-                        piece_.x,piece_.y = dict_center[recent_pointer]
-            elif recent_pointer or latest_pointer:
-                pass
-            else:
-                piece_=board[recent_pointer[0],recent_pointer[1]]
-                piece_.x, piece_.y = dict_center[recent_pointer]
-                # if latest_pointer and (latest_pointer not in board.board_dict):
-                #     if piece_.__class__==NascentGoat:
-                #         goats_placed+=1
-                #         if goats_placed==20:
-                #             del board.board_dict[recent_pointer]
-                #     else:
-                #         del board.board_dict[recent_pointer]
-                #     board.board_dict[latest_pointer] = piece_
-                #     piece_.x, piece_.y = dict_center[latest_pointer]
-                #     piece_.coordinate = latest_pointer
-                # else:
-                #     piece_.x, piece_.y = dict_center[recent_pointer]
-        elif event.type == pygame.MOUSEMOTION:
-            if dragging:
-                mousex, mousey = pygame.mouse.get_pos()
+            if recent_pointer == 1:
                 try:
-                    piece_ = board[recent_pointer[0], recent_pointer[1]]
-                    piece_.x = mousex
-                    piece_.y = mousey
+                    board.move(f'G{latest_pointer[0]}{latest_pointer[1]}')
                 except:
                     pass
-    pygame.draw.circle(screen, GRAY, goat_coordinate, 30)
+            else:
+                try:
+                    board.pure_move(f'{recent_pointer[0]}{recent_pointer[1]}{latest_pointer[0]}{latest_pointer[1]}')
+                except:
+                    pass
+            undo_btn.on_click(event)
+        elif event.type == pygame.MOUSEMOTION:
+            if dragging and recent_pointer:
+                real_dragging = True
+                mousex, mousey = pygame.mouse.get_pos()
+                if recent_pointer == 1:
+                    dragblit = ("G", (mousex - 29, mousey - 29))
+                else:
+                    piece = board[recent_pointer[0], recent_pointer[1]]
+                    if piece:
+                        dragblit = (piece.__str__(), (mousex - 30, mousey - 30))
+    pygame.draw.circle(screen, GRAY, goat_coordinate, 28)
+    infoblit()
     gameloop()
     pygame.display.update()
 
 pygame.quit()
+print(board.pgn)
 quit()
