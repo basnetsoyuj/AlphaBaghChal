@@ -24,6 +24,10 @@ class PolicyValueNet:
         in_x = x = Input((5, 5, 5))
 
         # (batch, channels, height, width)
+        x = Conv2D(filters=self.config.cnn_first_filter_num, kernel_size=self.config.cnn_first_filter_size, padding="same",
+                   data_format="channels_first", use_bias=False, kernel_regularizer=l2(self.config.l2_reg),
+                   name=f"input1_conv-{self.config.cnn_filter_num}-{self.config.cnn_first_filter_size}x{self.config.cnn_first_filter_size}")(
+            x)
         x = Conv2D(filters=self.config.cnn_filter_num, kernel_size=self.config.cnn_first_filter_size, padding="same",
                    data_format="channels_first", use_bias=False, kernel_regularizer=l2(self.config.l2_reg),
                    name=f"input_conv-{self.config.cnn_filter_num}-{self.config.cnn_first_filter_size}x{self.config.cnn_first_filter_size}")(
@@ -115,9 +119,5 @@ class PolicyValueNet:
         board_repr = np.array(board_repr)
         mtcs_prob = np.array(mtcs_prob)
         winner = np.array(winner)
-        #loss = self.model.evaluate(state_input_union, [mcts_probs_union, winner_union], batch_size=self.config.)
-        #action_probs, _ = self.model.predict_on_batch(state_input_union)
-        #entropy = self_entropy(action_probs)
-        #K.set_value(self.model.optimizer.lr, learning_rate)
         self.model.fit(board_repr, [mtcs_prob, winner],epochs=epochs)
 

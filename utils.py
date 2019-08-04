@@ -3,9 +3,8 @@ import pickle
 
 
 def softmax(x):
-    probs = np.exp(x - np.max(x))
-    probs /= np.sum(probs)
-    return probs
+    arr=np.exp(x)
+    return arr/sum(arr)
 
 
 def mask_illegal(policy_vector, possible_moves):
