@@ -10,7 +10,7 @@ class Engine:
     def static_evaluation(self, board):
         end = board.is_game_over()
         if not end:
-            return 150 * board.baghs_trapped - 120 * board.goats_captured
+            return 1.5 * board.baghs_trapped - 1.2 * board.goats_captured
         winner = board.winner()
         if winner == "G":
             return INF
@@ -24,7 +24,7 @@ class Engine:
             return 0, self.static_evaluation(board)
 
         if maxPlayer:
-            maxEval = -INF
+            maxEval = -INF*10
             best_move = 0
             for move in board.possible_moves():
                 b_copy = deepcopy(board)
@@ -38,7 +38,7 @@ class Engine:
                     break
             return best_move, maxEval
         else:
-            minEval = INF
+            minEval = INF*10
             best_move = 0
             move_list = list(board.possible_moves())
             move_list.sort(key=lambda a: 5-len(a))

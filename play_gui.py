@@ -1,9 +1,9 @@
 import baghchal
 from baghchal.env import Board
-from player import MCTSPlayer
 import tkinter as tk
 import pygame
 import os
+import threading
 
 pygame.init()
 
@@ -75,7 +75,17 @@ class ChoiceApp(tk.Tk):
 
 app = ChoiceApp()
 goat_player, bagh_player, pgn = app.return_input()
+if goat_player or bagh_player:
+    # from player import MCTSPlayer
+    from baghchal.engine import Engine
 
+    AI = Engine(4)
+
+
+    def make_best_move():
+        global agent
+        board.move(AI.get_best_move(board)[0])
+        agent = 0
 board = Board(pgn)
 
 
@@ -129,11 +139,14 @@ def coordinate_pointing():
         return 1
     else:
         return 0
+
+
 def undo():
     try:
         board.undo()
     except:
         pass
+
 
 screen = pygame.display.set_mode((DISPLAY_WIDTH, DISPLAY_HEIGHT))
 pygame.display.set_caption('Bagh Chal')
@@ -142,12 +155,16 @@ dragblit = 0
 font = pygame.font.Font('freesansbold.ttf', 25)
 font1 = pygame.font.Font('freesansbold.ttf', 20)
 undo_btn = Button(rect=(640, 225, 160, 45), command=undo)
+agent = 0
 
-def render_text(font,text,color,bgcolor,x,y):
+
+def render_text(font, text, color, bgcolor, x, y):
     texts = font.render(text, True, color, bgcolor)
     rect = texts.get_rect()
-    rect.center = (x,y)
-    screen.blit(texts,rect)
+    rect.center = (x, y)
+    screen.blit(texts, rect)
+
+
 def blit_piece(piece, position):
     if piece == "B":
         screen.blit(bagh_img, position)
@@ -157,18 +174,21 @@ def blit_piece(piece, position):
 
 def infoblit():
     screen.blit(trapped_bagh, (15, 5))
-    render_text(font,f'Baghs Trapped: {board.baghs_trapped}',(17, 17, 17), WHITE,180, 30)
-    render_text(font,f'Goats Captured: {board.goats_captured}',(17, 17, 17), WHITE,505, 30)
-    render_text(font,f'{20-board.goats_placed}',(17, 17, 17), WHITE,705, 50)
+    render_text(font, f'Baghs Trapped: {board.baghs_trapped}', (17, 17, 17), WHITE, 180, 30)
+    render_text(font, f'Goats Captured: {board.goats_captured}', (17, 17, 17), WHITE, 505, 30)
+    render_text(font, f'{20-board.goats_placed}', (17, 17, 17), WHITE, 705, 50)
     screen.blit(dead_goat, (330, 8))
     if board.is_game_over():
         render_text(font, f" Game Over! ", WHITE, MAROON, 720, 175)
         winner = convert(board.winner())
-        render_text(font1, f" Winner: {winner} ", GRAY, WHITE, 720, 200)
+        if board.winner():
+            render_text(font1, f" Winner: {winner} ", GRAY, WHITE, 720, 200)
+        else:
+            render_text(font1, f" Draw: 1/2-1/2 ", GRAY, WHITE, 720, 200)
     else:
         render_text(font, f" {convert(board.next_turn)}'s Turn ", WHITE, GRAY, 720, 200)
     if board.moves:
-        render_text(font1, board.pgn, (17,17,17),WHITE, 400, 620)
+        render_text(font1, board.pgn[-70:], (17, 17, 17), WHITE, 400, 620)
     undo_btn.draw(screen)
     render_text(font, "UNDO", WHITE, (48, 64, 66), 720, 250)
 
@@ -218,16 +238,17 @@ while not game_exit:
             real_dragging = False
             dragblit = 0
             latest_pointer = coordinate_pointing()
-            if recent_pointer == 1:
-                try:
-                    board.move(f'G{latest_pointer[0]}{latest_pointer[1]}')
-                except:
-                    pass
-            else:
-                try:
-                    board.pure_move(f'{recent_pointer[0]}{recent_pointer[1]}{latest_pointer[0]}{latest_pointer[1]}')
-                except:
-                    pass
+            if (goat_player == 0 and board.next_turn=="G") or (bagh_player == 0 and board.next_turn=="B"):
+                if recent_pointer == 1:
+                    try:
+                        board.move(f'G{latest_pointer[0]}{latest_pointer[1]}')
+                    except:
+                        pass
+                else:
+                    try:
+                        board.pure_move(f'{recent_pointer[0]}{recent_pointer[1]}{latest_pointer[0]}{latest_pointer[1]}')
+                    except:
+                        pass
             undo_btn.on_click(event)
         elif event.type == pygame.MOUSEMOTION:
             if dragging and recent_pointer:
@@ -242,8 +263,16 @@ while not game_exit:
     pygame.draw.circle(screen, GRAY, goat_coordinate, 28)
     infoblit()
     gameloop()
+    if ((goat_player and board.next_turn == "G") or (
+            bagh_player and board.next_turn == "B")) and not board.is_game_over() and not agent:
+        try:
+            agent = threading.Thread(target=make_best_move)
+            agent.start()
+        except:
+            pass
     pygame.display.update()
 
 pygame.quit()
 print(board.pgn)
 quit()
+#1. G53 B5545 2. G54 B4555 3. G31 B5545 4. G55 B1524 5. G15 B2414 6. G21 B1413 7. G12 B1322 8. G13 B2223 9. G14 B4544 10. G45 B4435 11. G44 B5152 12. G43 B5251 13. G52 B3534 14. G35 B1122 15. G11 B3433 16. G25 B2324 17. G23 B3334 18. G41 B5142 19. G51 B2232 20. G33 Bx2422 21. G1524 B2223 22. G1122# 1-0
