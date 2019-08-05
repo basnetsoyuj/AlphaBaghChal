@@ -84,7 +84,10 @@ if goat_player or bagh_player:
 
     def make_best_move():
         global agent
-        board.move(AI.get_best_move(board)[0])
+        try:
+            board.move(AI.get_best_move(board)[0])
+        except:
+            pass
         agent = 0
 board = Board(pgn)
 
