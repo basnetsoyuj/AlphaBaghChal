@@ -4,7 +4,7 @@ Bagh Chal is one of the many variants of the tiger hunting board games played lo
 
 Inspired by AlphaZero, the project tries to use state-of-the-art methods in the deep reinforcement learning paradigm to master the traditional Nepali board game of Bagh Chal through self-play. It uses a single deep residual convolutional neural network which takes in a multilayered binary board state and outputs both the game policy and value, along with Monte Carlo Tree Search.
 
-Check out the accompanying blog where I write about my experience developing this self-learning AI agent: [Mastering Bagh Chal with self-learning AI](https://blog.basnetsoyuj.com.np/mastering-bagh-chal-with-self-learning-ai/)
+Check out the accompanying blog where I write about my experience developing this self-learning AI agent: [Mastering Bagh Chal with self-learning AI](https://soyuj.com.np/blog/mastering-bagh-chal-with-self-learning-ai/)
 
 ![AI playing BaghChal](baghchal.gif)
 
